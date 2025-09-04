@@ -1,0 +1,92 @@
+/* Livewire Calendar - Component styles */
+
+:root {
+    /* Mobile behavior: 'stack' or 'scroll' */
+    --calendar-mobile-view: stack;
+}
+
+/* Base */
+.calendar-component {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Month transition */
+.calendar-grid {
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Events */
+.calendar-day .event {
+    transition: background-color 0.15s ease-in-out;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Today marker */
+.calendar-day.today {
+    position: relative;
+}
+
+.calendar-day.today::after {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    /* blue-500 */
+}
+
+/* Modal */
+.calendar-modal {
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .calendar-weeks.stack .calendar-day {
+        border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+        /* gray-200 with transparency */
+    }
+
+    .calendar-weeks.stack .grid {
+        display: grid;
+    }
+
+    .calendar-weeks.scroll {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .calendar-weeks.scroll::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .calendar-weeks.scroll::-webkit-scrollbar-track {
+        background: rgba(229, 231, 235, 0.5);
+    }
+
+    .calendar-weeks.scroll::-webkit-scrollbar-thumb {
+        background-color: rgba(156, 163, 175, 0.5);
+        border-radius: 2px;
+    }
+
+    .calendar-weeks.scroll {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .calendar-weeks.scroll .grid {
+        display: inline-grid;
+        min-width: 100%;
+    }
+}
+
+/* Dark mode */
+.dark .calendar-day.today::after {
+    background-color: #60a5fa;
+    /* blue-400 */
+}
