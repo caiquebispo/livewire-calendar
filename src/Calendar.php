@@ -66,6 +66,18 @@ class Calendar extends Component
     public string $mobileView = 'stack';
 
     /**
+     * Estado de carregamento durante navegação entre meses
+     */
+    public bool $isLoading = false;
+
+    /**
+     * Listeners para eventos Livewire
+     */
+    protected $listeners = [
+        'eventsLoaded' => 'handleEventsLoaded',
+    ];
+
+    /**
      * Inicializa o componente
      */
     public function mount(
@@ -188,12 +200,18 @@ class Calendar extends Component
      */
     public function previousMonth(): void
     {
+        $this->setLoadingState(true);
+        
         $this->currentMonth = Carbon::createFromFormat('Y-m', $this->currentMonth)
             ->subMonth()
             ->format('Y-m');
 
         if ($this->lazyLoadEvents) {
+            // Limpa eventos atuais antes de carregar novos
+            $this->events = [];
             $this->dispatch('calendar:month-changed', month: $this->currentMonth);
+        } else {
+            $this->setLoadingState(false);
         }
     }
 
@@ -202,12 +220,18 @@ class Calendar extends Component
      */
     public function nextMonth(): void
     {
+        $this->setLoadingState(true);
+        
         $this->currentMonth = Carbon::createFromFormat('Y-m', $this->currentMonth)
             ->addMonth()
             ->format('Y-m');
 
         if ($this->lazyLoadEvents) {
+            // Limpa eventos atuais antes de carregar novos
+            $this->events = [];
             $this->dispatch('calendar:month-changed', month: $this->currentMonth);
+        } else {
+            $this->setLoadingState(false);
         }
     }
 
@@ -237,6 +261,33 @@ class Calendar extends Component
     public function eventClicked(int $eventId): void
     {
         $this->dispatch('calendar:event-clicked', eventId: $eventId);
+    }
+
+    /**
+     * Define o estado de carregamento
+     */
+    public function setLoadingState(bool $loading): void
+    {
+        $this->isLoading = $loading;
+    }
+
+    /**
+     * Método para ser chamado quando os eventos são carregados externamente
+     * Deve ser chamado pelo componente pai após carregar os eventos
+     */
+    public function eventsLoaded(array $events = []): void
+    {
+        $this->events = $events;
+        $this->setLoadingState(false);
+    }
+
+    /**
+     * Handler para o evento eventsLoaded vindo do componente pai
+     */
+    public function handleEventsLoaded($events = []): void
+    {
+        $this->events = $events;
+        $this->setLoadingState(false);
     }
 
     /**

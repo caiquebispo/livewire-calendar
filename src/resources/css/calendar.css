@@ -15,12 +15,72 @@
     transition: opacity 0.2s ease-in-out;
 }
 
+/* Loading states */
+.calendar-loading-overlay {
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s ease-in-out;
+}
+
+.calendar-loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.calendar-loading-progress {
+    animation: loading-progress 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-progress {
+    0%, 100% {
+        transform: scaleX(0.3);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scaleX(1);
+        opacity: 1;
+    }
+}
+
+/* Calendar weeks transition */
+.calendar-weeks {
+    transition: opacity 0.2s ease-in-out, filter 0.2s ease-in-out;
+}
+
+.calendar-weeks.loading {
+    opacity: 0.5;
+    filter: blur(1px);
+    pointer-events: none;
+}
+
 /* Events */
 .calendar-day .event {
-    transition: background-color 0.15s ease-in-out;
+    transition: background-color 0.15s ease-in-out, opacity 0.2s ease-in-out;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Loading state for events */
+.calendar-day.loading .event {
+    opacity: 0.3;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Today marker */
