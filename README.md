@@ -1,7 +1,13 @@
 # Livewire Calendar
 
 Lightweight and customizable calendar component for Laravel Livewire 3, styled with TailwindCSS. Focused on simplicity, extensibility, and DX.
-
+<p align="center">
+  <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/v" alt="Latest Stable Version"></a>
+  <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/downloads" alt="Total Downloads"></a>
+  <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/v/unstable" alt="Latest Unstable Version"></a>
+  <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/license" alt="License"></a>
+  <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/require/php" alt="PHP Version Require"></a>
+</p>
 ## Requisitos
 
 - PHP 8.2+
