@@ -8,6 +8,16 @@ Lightweight and customizable calendar component for Laravel Livewire 3, styled w
   <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/license" alt="License"></a>
   <a href="https://packagist.org/packages/caiquebispo/livewire-calendar"><img src="http://poser.pugx.org/caiquebispo/livewire-calendar/require/php" alt="PHP Version Require"></a>
 </p>
+
+## ✨ New in v1.1
+
+- 📱 **Enhanced Responsiveness** - Adaptive layout for all screen sizes
+- 👆 **Swipe Navigation** - Swipe left/right to change months on mobile
+- 🎯 **Touch-friendly** - 44px minimum tap targets for better mobile UX
+- 🔤 **Compact Weekdays** - Abbreviated weekday names on mobile (D, S, T...)
+- ✨ **Today Animation** - Pulsing indicator for current day
+- 🎨 **Smooth Transitions** - Animated cell interactions
+
 ## Requisitos
 
 - PHP 8.2+
