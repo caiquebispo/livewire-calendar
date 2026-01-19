@@ -12,7 +12,7 @@ Lightweight and customizable calendar component for Laravel Livewire 3, styled w
 
 - PHP 8.2+
 - Laravel 10+
-- Livewire 3+
+- Livewire ^3.5.0|^4.0.0
 - TailwindCSS 3+
 
 ## Installation

@@ -29,7 +29,7 @@
     ],
     "require": {
         "php": "^8.2",
-        "livewire/livewire": "^4.0"
+        "livewire/livewire": "^3.5.0|^4.0.0"
     },
     "extra": {
         "laravel": {
