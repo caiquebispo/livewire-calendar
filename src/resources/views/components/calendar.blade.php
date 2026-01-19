@@ -1,6 +1,11 @@
-<div class="calendar-component w-full">
+<div 
+    class="calendar-component w-full"
+    x-data="calendarSwipe()"
+    @touchstart.passive="handleTouchStart($event)"
+    @touchend.passive="handleTouchEnd($event)"
+>
     <!-- Calendar header -->
-    <div class="calendar-header flex items-center justify-between mb-4">
+    <div class="calendar-header flex items-center justify-between mb-4 px-2 sm:px-0">
         <!-- Loading indicator for header -->
         @if ($isLoading)
             <div class="absolute top-0 left-0 right-0 h-1 bg-blue-200 dark:bg-blue-800 overflow-hidden">
@@ -10,19 +15,19 @@
         @if (isset($header))
             {{ $header }}
         @else
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 sm:space-x-4 w-full justify-center">
                 <button type="button" wire:click="previousMonth"
-                    class="cursor-pointer p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="cursor-pointer p-2 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 active:scale-95 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd"
                             d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
                             clip-rule="evenodd" />
                     </svg>
                 </button>
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                <h2 class="text-base sm:text-xl font-semibold text-gray-800 dark:text-gray-200 min-w-[140px] sm:min-w-[180px] text-center">
                     {{ $this->calendarData["monthName"] }}</h2>
                 <button type="button" wire:click="nextMonth"
-                    class="cursor-pointer p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="cursor-pointer p-2 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 active:scale-95 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd"
                             d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
@@ -31,6 +36,11 @@
                 </button>
             </div>
         @endif
+    </div>
+
+    <!-- Swipe hint for mobile -->
+    <div class="sm:hidden text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
+        <span>← Deslize para navegar →</span>
     </div>
 
     <!-- Calendar grid -->
@@ -44,11 +54,15 @@
                 </div>
             </div>
         @endif
-        <!-- Weekday header -->
+        
+        <!-- Weekday header - Responsive -->
         <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-800">
             @foreach ($this->weekdays as $weekday)
-                <div class="py-2 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {{ $weekday }}
+                <div class="py-2 sm:py-3 text-center text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{-- Mobile: show first letter only --}}
+                    <span class="sm:hidden">{{ mb_substr($weekday, 0, 1) }}</span>
+                    {{-- Desktop: show full abbreviation --}}
+                    <span class="hidden sm:inline">{{ $weekday }}</span>
                 </div>
             @endforeach
         </div>
@@ -59,9 +73,11 @@
                 <div class="grid grid-cols-7 border-t border-gray-200 dark:border-gray-700">
                     @foreach ($week as $day)
                         <div
-                            class="calendar-day min-h-[100px] p-2 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative
+                            wire:click="openDayModal('{{ $day["date"] }}')"
+                            class="calendar-day min-h-[60px] sm:min-h-[100px] p-1 sm:p-2 border-r border-gray-200 dark:border-gray-700 last:border-r-0 relative cursor-pointer
+                                hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors
                                 {{ $day["isCurrentMonth"] ? "" : "bg-gray-50 dark:bg-gray-900/50 text-gray-400 dark:text-gray-600" }}
-                                {{ $day["isToday"] ? "bg-blue-50 dark:bg-blue-900/20" : "" }}">
+                                {{ $day["isToday"] ? "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500 ring-inset" : "" }}">
                             @php
                                 $customDayCellView = $dayCellView ?? config("calendar.day_cell_view");
                             @endphp
@@ -161,6 +177,34 @@
 
     <!-- Responsive styles -->
     <style>
+        /* Base calendar styles */
+        .calendar-component {
+            touch-action: pan-y pinch-zoom;
+        }
+
+        /* Smooth transitions */
+        .calendar-grid {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .calendar-day {
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .calendar-day:active {
+            transform: scale(0.98);
+        }
+
+        /* Today indicator animation */
+        .calendar-day.ring-2 {
+            animation: today-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes today-pulse {
+            0%, 100% { box-shadow: inset 0 0 0 2px rgb(59, 130, 246); }
+            50% { box-shadow: inset 0 0 0 3px rgb(59, 130, 246); }
+        }
+
         /* Small screens (mobile) */
         @media (max-width: 640px) {
             .calendar-grid {
@@ -168,8 +212,14 @@
             }
 
             .calendar-day {
-                min-height: 80px;
+                min-height: 60px;
                 padding: 0.25rem;
+            }
+
+            /* Event badges on mobile */
+            .calendar-day .text-xs {
+                font-size: 0.65rem;
+                padding: 0.125rem 0.25rem;
             }
 
             /* Stack mode */
@@ -177,13 +227,14 @@
                 display: flex;
                 flex-direction: column;
                 overflow-y: auto;
-                max-height: 80vh;
+                max-height: 70vh;
             }
 
             /* Horizontal scroll mode */
             .calendar-weeks.scroll {
                 overflow-x: auto;
                 white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
             }
 
             .calendar-weeks.scroll .grid {
@@ -191,5 +242,65 @@
                 min-width: 100%;
             }
         }
+
+        /* Tablet */
+        @media (min-width: 641px) and (max-width: 1024px) {
+            .calendar-day {
+                min-height: 80px;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1025px) {
+            .calendar-day {
+                min-height: 100px;
+            }
+        }
+
+        /* Dark mode adjustments */
+        .dark .calendar-day:active {
+            background-color: rgba(55, 65, 81, 0.8);
+        }
     </style>
+
+    <!-- Alpine.js Swipe Handler -->
+    <script>
+        function calendarSwipe() {
+            return {
+                touchStartX: 0,
+                touchStartY: 0,
+                swiping: false,
+                
+                handleTouchStart(event) {
+                    this.touchStartX = event.touches[0].clientX;
+                    this.touchStartY = event.touches[0].clientY;
+                    this.swiping = true;
+                },
+                
+                handleTouchEnd(event) {
+                    if (!this.swiping) return;
+                    
+                    const touchEndX = event.changedTouches[0].clientX;
+                    const touchEndY = event.changedTouches[0].clientY;
+                    
+                    const deltaX = touchEndX - this.touchStartX;
+                    const deltaY = touchEndY - this.touchStartY;
+                    
+                    // Only trigger if horizontal swipe is significant and larger than vertical
+                    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+                        if (deltaX > 0) {
+                            // Swipe right -> previous month
+                            this.$wire.previousMonth();
+                        } else {
+                            // Swipe left -> next month
+                            this.$wire.nextMonth();
+                        }
+                    }
+                    
+                    this.swiping = false;
+                }
+            }
+        }
+    </script>
 </div>
+

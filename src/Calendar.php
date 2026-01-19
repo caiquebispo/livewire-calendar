@@ -71,6 +71,16 @@ class Calendar extends Component
     public bool $isLoading = false;
 
     /**
+     * View mode: 'month', 'week', or 'day'
+     */
+    public string $viewMode = 'month';
+
+    /**
+     * Selected date for week/day view
+     */
+    public string $selectedDate;
+
+    /**
      * Listeners para eventos Livewire
      */
     protected $listeners = [
@@ -85,10 +95,13 @@ class Calendar extends Component
         bool $lazyLoadEvents = null,
         int $maxItemsPerDay = null,
         string $dayCellView = null,
-        string $mobileView = null
+        string $mobileView = null,
+        string $viewMode = null
     ): void {
         $this->events = $events;
         $this->currentMonth = Carbon::now()->format('Y-m');
+        $this->selectedDate = Carbon::now()->format('Y-m-d');
+        $this->viewMode = $viewMode ?? 'month';
 
         // Aplica configurações do arquivo config ou dos parâmetros
         $this->lazyLoadEvents = $lazyLoadEvents ?? config('calendar.lazy_load_events', true);
@@ -175,8 +188,102 @@ class Calendar extends Component
         // Organiza os dias em semanas
         $weeks = array_chunk($days, 7);
 
+        // Calculate multi-day event layouts for each week
+        $weeksWithEvents = [];
+        foreach ($weeks as $week) {
+            $weekStart = Carbon::parse($week[0]['date']);
+            $weekEnd = Carbon::parse($week[6]['date'])->endOfDay();
+            
+            // Gather all multi-day events active in this week
+            // Note: This logic iterates all events; optimization needed for production with thousands of events
+            $weekEvents = [];
+            foreach ($this->events as $dayEvent) {
+                foreach ($dayEvent['data'] as $event) {
+                    if (!isset($event['end_time'])) continue;
+                    
+                    $evtStart = Carbon::parse($event['start_time']);
+                    $evtEnd = Carbon::parse($event['end_time']);
+                    
+                    // Check intersection
+                    if ($evtStart <= $weekEnd && $evtEnd >= $weekStart) {
+                        // Calculate start/end columns (0-6)
+                        $startCol = 0;
+                        if ($evtStart > $weekStart) {
+                            $startCol = $evtStart->diffInDays($weekStart);
+                        }
+                        
+                        $endCol = 6;
+                        if ($evtEnd < $weekEnd) {
+                            $endCol = $evtEnd->diffInDays($weekStart); // diffInDays is absolute, check direction
+                            // Use diffInDays directly from weekStart
+                            $endCol = $weekStart->diffInDays($evtEnd);
+                        }
+
+                        // Determine if it spans multiple days
+                        $span = $endCol - $startCol + 1;
+                        $isMultiDay = $span > 1 || isset($event['is_multiday']);
+                        
+                        if ($isMultiDay) {
+                            // Find suitable row (visual stacking)
+                            $row = 0;
+                            // Need to track occupied rows for this week. 
+                            // This is complex. Simplified approach: auto-increment for demo.
+                            // Real implementation: keep track of occupied slots per row [0,0,0,0,0,0,0]
+                            
+                            $weekEvents[] = [
+                                'id' => $event['id'],
+                                'title' => $event['title'],
+                                'color' => $event['color'] ?? 'blue',
+                                'startCol' => $startCol + 1, // CSS Grid is 1-based
+                                'span' => $span,
+                                'isMultiDay' => true
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Simple collision detection (greedy) to assign rows
+            // Sort by start col, then span desc
+            usort($weekEvents, function($a, $b) {
+                if ($a['startCol'] == $b['startCol']) return $b['span'] <=> $a['span'];
+                return $a['startCol'] <=> $b['startCol'];
+            });
+
+            // Allocate rows
+            // Grid of occupied cells: Matrix[row][col] = true/false
+            $gridMatrix = []; 
+            foreach ($weekEvents as &$evt) {
+                $row = 0;
+                while (true) {
+                    $collision = false;
+                    for ($c = $evt['startCol']; $c < $evt['startCol'] + $evt['span']; $c++) {
+                        if (isset($gridMatrix[$row][$c])) {
+                            $collision = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$collision) {
+                        // Place here
+                        $evt['row'] = $row;
+                        for ($c = $evt['startCol']; $c < $evt['startCol'] + $evt['span']; $c++) {
+                            $gridMatrix[$row][$c] = true;
+                        }
+                        break;
+                    }
+                    $row++;
+                }
+            }
+
+            $weeksWithEvents[] = [
+                'days' => $week,
+                'multiDayEvents' => $weekEvents
+            ];
+        }
+
         return [
-            'weeks' => $weeks,
+            'weeks' => $weeksWithEvents,
             'monthName' => Carbon::createFromFormat('Y-m', $this->currentMonth)->format(config('calendar.month_format', 'F Y')),
         ];
     }
@@ -193,6 +300,164 @@ class Calendar extends Component
         }
 
         return [];
+    }
+
+    /**
+     * Set the calendar view mode
+     */
+    public function setViewMode(string $mode): void
+    {
+        $this->viewMode = in_array($mode, ['month', 'week', 'day']) ? $mode : 'month';
+    }
+
+    /**
+     * Go to today
+     */
+    public function goToToday(): void
+    {
+        $this->selectedDate = Carbon::now()->format('Y-m-d');
+        $this->currentMonth = Carbon::now()->format('Y-m');
+        
+        if ($this->lazyLoadEvents) {
+            $this->events = [];
+            $this->dispatch('calendar:month-changed', month: $this->currentMonth);
+        }
+    }
+
+    /**
+     * Computed property for week data
+     */
+    #[Computed]
+    public function weekData(): array
+    {
+        $selectedDate = Carbon::parse($this->selectedDate);
+        $startOfWeek = $selectedDate->copy()->startOfWeek(Carbon::SUNDAY);
+        
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = $startOfWeek->copy()->addDays($i);
+            $days[] = [
+                'date' => $date->format('Y-m-d'),
+                'day' => $date->format('d'),
+                'dayName' => $date->format('D'),
+                'isCurrentMonth' => $date->format('Y-m') === $this->currentMonth,
+                'isToday' => $date->isToday(),
+                // Use new method with position data
+                'events' => $this->getEventsForDayWithPosition($date->format('Y-m-d')),
+            ];
+        }
+        
+        return [
+            'days' => $days,
+            'weekRange' => $startOfWeek->format('d M') . ' - ' . $startOfWeek->copy()->addDays(6)->format('d M Y'),
+        ];
+    }
+
+    /**
+     * Computed property for day data
+     */
+    #[Computed]
+    public function dayData(): array
+    {
+        $date = Carbon::parse($this->selectedDate);
+        
+        return [
+            'date' => $date->format('Y-m-d'),
+            'dayName' => $date->format('l'),
+            'fullDate' => $date->format('d F Y'),
+            'isToday' => $date->isToday(),
+            // Use new method with position data
+            'events' => $this->getEventsForDayWithPosition($date->format('Y-m-d')),
+        ];
+    }
+    
+    /**
+     * Select a specific date
+     */
+    public function selectDate(string $date): void
+    {
+        $this->selectedDate = $date;
+        $this->dispatch('calendar:day-clicked', date: $date);
+    }
+
+    /**
+     * Navigate to previous period based on view mode
+     */
+    public function previousPeriod(): void
+    {
+        if ($this->viewMode === 'week') {
+            $this->selectedDate = Carbon::parse($this->selectedDate)->subWeek()->format('Y-m-d');
+        } elseif ($this->viewMode === 'day') {
+            $this->selectedDate = Carbon::parse($this->selectedDate)->subDay()->format('Y-m-d');
+        }
+    }
+
+    /**
+     * Navigate to next period based on view mode
+     */
+    public function nextPeriod(): void
+    {
+        if ($this->viewMode === 'week') {
+            $this->selectedDate = Carbon::parse($this->selectedDate)->addWeek()->format('Y-m-d');
+        } elseif ($this->viewMode === 'day') {
+            $this->selectedDate = Carbon::parse($this->selectedDate)->addDay()->format('Y-m-d');
+        }
+    }
+
+    /**
+     * Computed property for grid hours (00:00 - 23:00)
+     */
+    #[Computed]
+    public function gridHours(): array
+    {
+        $hours = [];
+        for ($i = 0; $i < 24; $i++) {
+            $hours[] = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
+        }
+        return $hours;
+    }
+
+    /**
+     * Calculate event position and dimensions for the time grid
+     */
+    public function calculateEventPosition(array $event): array
+    {
+        $start = Carbon::parse($event['start_time'] ?? $event['time'] ?? '00:00');
+        $end = isset($event['end_time']) 
+            ? Carbon::parse($event['end_time']) 
+            : $start->copy()->addHour(); // Default to 1h duration
+            
+        // Start minutes from midnight
+        $startMinutes = $start->hour * 60 + $start->minute;
+        $endMinutes = $end->hour * 60 + $end->minute;
+        
+        // Duration in minutes
+        $duration = $endMinutes - $startMinutes;
+        
+        // Calculate percentages (1440 minutes in a day)
+        $top = ($startMinutes / 1440) * 100;
+        $height = ($duration / 1440) * 100;
+        
+        return [
+            'top' => "{$top}%",
+            'height' => "{$height}%",
+            'start_formatted' => $start->format('H:i'),
+            'end_formatted' => $end->format('H:i'),
+            'duration_formatted' => $start->diffForHumans($end, true, true),
+        ];
+    }
+    
+    /**
+     * Normalize event data with position info
+     */
+    protected function getEventsForDayWithPosition(string $date): array
+    {
+        $events = $this->getEventsForDay($date);
+        
+        return array_map(function ($event) {
+            $position = $this->calculateEventPosition($event);
+            return array_merge($event, $position);
+        }, $events);
     }
 
     /**
